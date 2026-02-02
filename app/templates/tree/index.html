@@ -339,6 +339,150 @@
         border-radius: 0;
         border: none;
     }
+
+    /* Family Sidebar Styles */
+    .family-sidebar {
+        position: fixed;
+        top: 0;
+        right: -400px;
+        width: 400px;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(20px);
+        border-left: 1px solid rgba(148, 163, 184, 0.1);
+        z-index: 1000;
+        padding: 40px 24px;
+        transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        overflow-y: auto;
+        box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .family-sidebar.is-open {
+        right: 0;
+    }
+
+    .sidebar-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 24px;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .sidebar-close:hover {
+        color: white;
+    }
+
+    .sidebar-photo {
+        width: 120px;
+        height: 120px;
+        border-radius: 20px;
+        object-fit: cover;
+        margin-bottom: 20px;
+        border: 2px solid rgba(59, 130, 246, 0.5);
+    }
+
+    .sidebar-name {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 4px;
+        color: white;
+    }
+
+    .sidebar-meta {
+        font-size: 14px;
+        color: #94a3b8;
+        margin-bottom: 30px;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .sidebar-section {
+        margin-bottom: 30px;
+    }
+
+    .sidebar-section h3 {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #475569;
+        margin-bottom: 12px;
+    }
+
+    .sidebar-bio {
+        font-size: 14px;
+        line-height: 1.6;
+        color: #cbd5e1;
+    }
+
+    .sidebar-footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .btn-full-profile {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        background: #3b82f6;
+        color: white;
+        text-align: center;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .btn-full-profile:hover {
+        background: #2563eb;
+        transform: translateY(-2px);
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+
+        .header-left,
+        .header-right {
+            width: 100%;
+            text-align: center;
+        }
+
+        .header-right {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .tree-search {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .tree-container {
+            height: calc(100vh - 280px);
+            /* More space for header */
+            border-radius: 1rem;
+        }
+
+        .family-sidebar {
+            width: 100%;
+            right: -100%;
+        }
+
+        .zoom-controls {
+            bottom: 16px;
+            right: 16px;
+        }
+
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+        }
+    }
 </style>
 
 <div class="zoom-controls">
