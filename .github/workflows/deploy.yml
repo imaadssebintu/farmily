@@ -19,6 +19,12 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           script: |
-            cd ~/docker/farmily
+            mkdir -p ~/docker
+            cd ~/docker
+            if [ ! -d "farmily" ]; then
+              git clone https://github.com/${{ github.repository }}.git farmily
+            fi
+            cd farmily
             git pull origin main
-            docker-compose up -d --build
+            # Try 'docker compose' (v2) first, fallback to 'docker-compose' (v1)
+            docker compose up -d --build || docker-compose up -d --build
