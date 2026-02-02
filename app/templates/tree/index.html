@@ -19,7 +19,11 @@
     .tree-container {
         width: 100%;
         height: calc(100vh - 180px);
-        background: #0f172a;
+        background-color: #0f172a;
+        background-image:
+            linear-gradient(rgba(30, 41, 59, 0.5) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(30, 41, 59, 0.5) 1px, transparent 1px);
+        background-size: 40px 40px;
         border: 1px solid #1e293b;
         border-radius: 1.5rem;
         overflow: hidden;
@@ -96,20 +100,7 @@
         pointer-events: none;
     }
 
-    /* Grid pattern for background */
-    .tree-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-image:
-            linear-gradient(rgba(30, 41, 59, 0.5) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(30, 41, 59, 0.5) 1px, transparent 1px);
-        background-size: 40px 40px;
-        pointer-events: none;
-    }
+    /* Grid pattern removed from pseudo-element to ensure it stays behind SVG */
 
     .tree-card {
         width: 220px;
