@@ -632,7 +632,13 @@
 
             svg = d3.select("#treeContainer").append("svg")
                 .attr("width", "100%")
-                .attr("height", "100%");
+                .attr("height", "100%")
+                .on("click", (event) => {
+                    // If we clicked directly on the SVG background (not a bubble from a card)
+                    if (event.target.tagName === 'svg') {
+                        closeSidebar();
+                    }
+                });
 
             zoom = d3.zoom().scaleExtent([0.1, 3]).on("zoom", (e) => g.attr("transform", e.transform));
             svg.call(zoom);
@@ -720,7 +726,8 @@
                     const indicatorColor = d.gender === 'Male' ? '#3b82f6' : (d.gender === 'Female' ? '#ec4899' : '#10b981');
                     const photo = d.photo_url || `https://api.dicebear.com/7.x/initials/svg?seed=${d.name}`;
                     return `
-                        <div class="tree-card" style="--indicator-color: ${indicatorColor}; pointer-events: auto;" onclick="openSidebar('${d.id}')">
+                        <div class="tree-card" style="--indicator-color: ${indicatorColor}; pointer-events: auto;" 
+                            onclick="event.stopPropagation(); openSidebar('${d.id}')">
                             <img src="${photo}" class="card-photo">
                             <div class="card-content">
                                 <div class="card-name">${d.name}</div>
