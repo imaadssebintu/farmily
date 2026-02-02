@@ -1,0 +1,262 @@
+<div class="page-header">
+    <div>
+        <h1 class="page-title">People</h1>
+        <p class="page-subtitle">Manage your family members</p>
+    </div>
+    <button onclick="showAddPersonModal()" class="btn-primary">+ Add Person</button>
+</div>
+
+<div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search by name..." onkeyup="searchPeople()">
+</div>
+
+<div id="peopleList" class="people-grid">
+    <!-- People cards will be loaded here -->
+</div>
+
+<!-- Add Person Modal -->
+<div id="addPersonModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add New Person</h2>
+            <button onclick="closeAddPersonModal()" class="modal-close">&times;</button>
+        </div>
+        <form id="addPersonForm" class="modal-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="firstName">First Name *</label>
+                    <input type="text" id="firstName" required>
+                </div>
+                <div class="form-group">
+                    <label for="middleName">Middle Name</label>
+                    <input type="text" id="middleName">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="lastName">Last Name *</label>
+                    <input type="text" id="lastName" required>
+                </div>
+                <div class="form-group">
+                    <label for="maidenName">Maiden Name</label>
+                    <input type="text" id="maidenName">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="gender">Gender *</label>
+                    <select id="gender" required>
+                        <option value="">Select...</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="isLiving">Status</label>
+                    <select id="isLiving">
+                        <option value="true">Living</option>
+                        <option value="false">Deceased</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="fatherPerson">Father (Optional)</label>
+                    <select id="fatherPerson">
+                        <option value="">None</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="motherPerson">Mother (Optional)</label>
+                    <select id="motherPerson">
+                        <option value="">None</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="birthDate">Birth Date</label>
+                    <input type="date" id="birthDate">
+                </div>
+                <div class="form-group">
+                    <label for="birthPlace">Birth Place</label>
+                    <input type="text" id="birthPlace">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="deathDate">Death Date</label>
+                    <input type="date" id="deathDate">
+                </div>
+                <div class="form-group">
+                    <label for="deathPlace">Death Place</label>
+                    <input type="text" id="deathPlace">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="occupation">Occupation</label>
+                <input type="text" id="occupation">
+            </div>
+
+            <div class="form-group">
+                <label for="biography">Biography</label>
+                <textarea id="biography" rows="4"></textarea>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" onclick="closeAddPersonModal()" class="btn-secondary">Cancel</button>
+                <button type="submit" class="btn-primary">Add Person</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let allPeople = [];
+
+    async function loadPeople() {
+        try {
+            const response = await fetch('/api/people');
+            const data = await response.json();
+
+            if (data.success) {
+                allPeople = data.data || [];
+                displayPeople(allPeople);
+            }
+        } catch (error) {
+            console.error('Failed to load people:', error);
+        }
+    }
+
+    function displayPeople(people) {
+        const peopleList = document.getElementById('peopleList');
+
+        if (!people || people.length === 0) {
+            peopleList.innerHTML = '<div class="empty-state">No people found. Add your first family member!</div>';
+            return;
+        }
+
+        peopleList.innerHTML = people.map(person => `
+            <div class="person-card" onclick="window.location.href='/people/${person.id}'">
+                <div class="person-card-header">
+                    <div class="person-avatar">${person.first_name.charAt(0)}${person.last_name.charAt(0)}</div>
+                    <div class="person-identity">
+                        <div class="person-name">${person.display_name}</div>
+                        <div class="person-occupation">${person.occupation || 'Unknown Occupation'}</div>
+                    </div>
+                    <div class="person-status-badge ${person.is_living ? 'status-living' : 'status-deceased'}">
+                        ${person.is_living ? '💚 Living' : '🕊️ Deceased'}
+                    </div>
+                </div>
+                <div class="person-card-body">
+                    <div class="info-item">
+                        <span class="info-label">Gender</span>
+                        <span class="info-value">${person.gender}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Lifespan</span>
+                        <span class="info-value">${person.lifespan || 'Unknown'}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function searchPeople() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+
+        if (!query) {
+            displayPeople(allPeople);
+            return;
+        }
+
+        const filtered = allPeople.filter(person =>
+            person.display_name.toLowerCase().includes(query) ||
+            (person.occupation && person.occupation.toLowerCase().includes(query))
+        );
+
+        displayPeople(filtered);
+    }
+
+    function showAddPersonModal() {
+        // Populate Father and Mother dropdowns
+        const fatherSelect = document.getElementById('fatherPerson');
+        const motherSelect = document.getElementById('motherPerson');
+
+        fatherSelect.innerHTML = '<option value="">None</option>';
+        motherSelect.innerHTML = '<option value="">None</option>';
+
+        allPeople.forEach(person => {
+            const option = document.createElement('option');
+            option.value = person.id;
+            // Show lifespan to help identify duplicates/ancestors
+            option.textContent = `${person.display_name} (${person.lifespan})`;
+
+            if (person.gender === 'Male') {
+                fatherSelect.appendChild(option);
+            } else if (person.gender === 'Female') {
+                motherSelect.appendChild(option);
+            }
+            // If Gender is 'Other', we don't list in either for simplicity unless requested
+        });
+
+        document.getElementById('addPersonModal').style.display = 'flex';
+    }
+
+    function closeAddPersonModal() {
+        document.getElementById('addPersonModal').style.display = 'none';
+        document.getElementById('addPersonForm').reset();
+    }
+
+    document.getElementById('addPersonForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = {
+            first_name: document.getElementById('firstName').value,
+            middle_name: document.getElementById('middleName').value || null,
+            last_name: document.getElementById('lastName').value,
+            maiden_name: document.getElementById('maidenName').value || null,
+            gender: document.getElementById('gender').value,
+            is_living: document.getElementById('isLiving').value === 'true',
+            birth_date: document.getElementById('birthDate').value || null,
+            birth_place: document.getElementById('birthPlace').value || null,
+            death_date: document.getElementById('deathDate').value || null,
+            death_place: document.getElementById('deathPlace').value || null,
+            occupation: document.getElementById('occupation').value || null,
+            biography: document.getElementById('biography').value || null,
+            father_id: document.getElementById('fatherPerson').value || null,
+            mother_id: document.getElementById('motherPerson').value || null
+        };
+
+        try {
+            const response = await fetch('/api/people', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                closeAddPersonModal();
+                loadPeople();
+            } else {
+                alert('Failed to add person: ' + data.message);
+            }
+        } catch (error) {
+            alert('An error occurred. Please try again.');
+        }
+    });
+
+    // Load people on page load
+    loadPeople();
+</script>

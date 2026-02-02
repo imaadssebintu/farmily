@@ -1,0 +1,74 @@
+package config
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"os"
+
+	_ "github.com/lib/pq"
+)
+
+type Config struct {
+	DB *sql.DB
+}
+
+var AppConfig *Config
+
+func InitDB() {
+	var psqlInfo string
+
+	// Check if LOCAL_DB environment variable is set
+	if os.Getenv("LOCAL_DB") == "true" {
+		psqlInfo = "host=localhost port=5432 user=postgres dbname=family sslmode=disable"
+		log.Println("Using local PostgreSQL database")
+	} else {
+		host := "129.80.85.203"
+		port := 5432
+		user := "imaad"
+		password := "Ertdfgxc"
+		dbname := "family"
+
+		psqlInfo = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable connect_timeout=60",
+			host, port, user, password, dbname)
+		log.Printf("Attempting to connect to remote database at %s:%d", host, port)
+	}
+
+	db, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		log.Fatal("Failed to open database connection:", err)
+	}
+
+	// Set connection pool settings
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+
+	log.Println("Testing database connection...")
+	if err = db.Ping(); err != nil {
+		log.Printf("Database connection failed: %v", err)
+
+		if os.Getenv("LOCAL_DB") != "true" {
+			log.Println("\n=== DATABASE CONNECTION FAILED ===")
+			log.Println("The remote database server is unreachable.")
+			log.Println("\nTo use a local PostgreSQL database instead:")
+			log.Println("1. Install PostgreSQL locally")
+			log.Println("2. Create database: createdb family")
+			log.Println("3. Set environment variable: $env:LOCAL_DB=\"true\"")
+			log.Println("4. Run the application again")
+			log.Println("\nOr check the remote database connection:")
+			log.Println("- Verify database 'family' exists")
+			log.Println("- Check network connectivity")
+		}
+
+		log.Fatal("Cannot establish database connection")
+	}
+
+	AppConfig = &Config{
+		DB: db,
+	}
+	log.Println("Database connected successfully")
+}
+
+func GetDB() *sql.DB {
+	return AppConfig.DB
+}

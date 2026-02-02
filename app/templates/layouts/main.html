@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="logo">🌳 Farmily Tree</h1>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item {{if eq .CurrentPage "dashboard"}}active{{end}}">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="/people" class="nav-item {{if eq .CurrentPage "people"}}active{{end}}">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-text">People</span>
+                </a>
+                <a href="/tree" class="nav-item {{if eq .CurrentPage "tree"}}active{{end}}">
+                    <span class="nav-icon">🌲</span>
+                    <span class="nav-text">Family Tree</span>
+                </a>
+                <a href="/events" class="nav-item {{if eq .CurrentPage "events"}}active{{end}}">
+                    <span class="nav-icon">📅</span>
+                    <span class="nav-text">Events</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button onclick="logout()" class="btn-logout">
+                    <span class="nav-icon">🚪</span>
+                    <span class="nav-text">Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {{embed}}
+        </main>
+    </div>
+
+    <script>
+        async function logout() {
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    window.location.href = '/auth/login';
+                }
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        }
+    </script>
+</body>
+</html>
