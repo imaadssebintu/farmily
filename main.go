@@ -135,6 +135,6 @@ func main() {
 	})
 
 	// Start server
-	log.Println("Server starting on :8080")
-	log.Fatal(app.Listen(":8080"))
+	log.Println("Server starting on :8000")
+	log.Fatal(app.Listen(":8000"))
 }
