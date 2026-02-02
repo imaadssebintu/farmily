@@ -1,7 +1,13 @@
-<div class="page-header">
-    <div>
-        <h1 class="page-title">Family Tree</h1>
-        <p class="page-subtitle">Visualize your family history</p>
+<div class="header-left">
+    <h1 class="page-title">Family Tree</h1>
+    <p class="page-subtitle">Visualize your family history</p>
+</div>
+<div class="header-right">
+    <div class="tree-search">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="treeSearchInput" placeholder="Find a family member..."
+            oninput="onTreeSearch(this.value)">
+        <div id="treeSearchResults" class="search-dropdown" style="display: none;"></div>
     </div>
 </div>
 
@@ -12,48 +18,574 @@
 <style>
     .tree-container {
         width: 100%;
-        height: calc(100vh - 200px);
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 1rem;
+        height: calc(100vh - 180px);
+        background: #0f172a;
+        border: 1px solid #1e293b;
+        border-radius: 1.5rem;
         overflow: hidden;
         position: relative;
+        box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5);
     }
 
-    .node circle {
-        stroke: #fff;
-        stroke-width: 2px;
+    .sidebar-family-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .family-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        background: #1e293b;
+        border-radius: 8px;
         cursor: pointer;
-        transition: all 0.3s;
+        transition: background 0.2s;
+        border: 1px solid transparent;
     }
 
-    .node:hover circle {
-        stroke: var(--primary-color);
-        stroke-width: 3px;
-        filter: drop-shadow(0 0 5px var(--primary-color));
+    .family-item:hover {
+        background: #273549;
+        border-color: #3b82f6;
     }
 
-    .node text {
-        font-family: 'Inter', sans-serif;
-        font-size: 12px;
-        fill: var(--text-primary);
+    .family-item img {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background: #334155;
+    }
+
+    .family-item .name {
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .family-item .rel {
+        font-size: 11px;
+        color: #64748b;
+        margin-left: auto;
+    }
+
+    /* Dimming logic */
+    .node.is-dimmed {
+        opacity: 0.2;
+        filter: grayscale(1);
+    }
+
+    .link.is-dimmed {
+        opacity: 0.1;
+    }
+
+    /* Generation Lanes Background */
+    .lane-even {
+        fill: rgba(30, 41, 59, 0.3);
+    }
+
+    .lane-odd {
+        fill: transparent;
+    }
+
+    .lane-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        fill: #475569;
+        text-transform: uppercase;
+        letter-spacing: 2px;
         pointer-events: none;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+
+    /* Grid pattern for background */
+    .tree-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image:
+            linear-gradient(rgba(30, 41, 59, 0.5) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(30, 41, 59, 0.5) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+    }
+
+    .tree-card {
+        width: 220px;
+        height: 80px;
+        background: rgba(30, 41, 59, 0.85);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        border-radius: 12px;
+        padding: 12px;
+        color: white;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        position: relative;
+        /* overflow: hidden; removed to prevent shadow clipping */
+    }
+
+    .tree-card::after {
+        content: '';
+        position: absolute;
+        bottom: 1px;
+        left: 1px;
+        right: 1px;
+        height: 3px;
+        background: var(--indicator-color, #334155);
+        border-bottom-left-radius: 11px;
+        border-bottom-right-radius: 11px;
+        opacity: 0.8;
+        transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        pointer-events: none;
+    }
+
+    .tree-card:hover::after {
+        bottom: 2px;
+        left: 2px;
+        right: 2px;
+        height: 4px;
+        opacity: 1;
+        filter: brightness(1.2);
+    }
+
+    .tree-card:hover {
+        background: rgba(30, 41, 59, 1);
+        border-color: #3b82f6;
+        transform: translateY(-6px) scale(1.05);
+        box-shadow: 0 15px 35px rgba(59, 130, 246, 0.3);
+        z-index: 50;
+    }
+
+    .tree-card.is-active {
+        border-color: #3b82f6;
+        background: #26334a;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+    }
+
+    .card-photo {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        background: #334155;
+        object-fit: cover;
+        flex-shrink: 0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: transform 0.3s;
+    }
+
+    .tree-card:hover .card-photo {
+        transform: scale(1.1);
+    }
+
+    .card-content {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        overflow: hidden;
+    }
+
+    .card-name {
+        font-weight: 600;
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #f8fafc;
+    }
+
+    .card-lifespan {
+        font-size: 11px;
+        color: #94a3b8;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .card-gender {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        font-size: 10px;
+        opacity: 0.5;
     }
 
     .link {
-        stroke: var(--border-color);
-        stroke-opacity: 0.6;
-        stroke-width: 1.5px;
+        stroke: #475569;
+        stroke-opacity: 0.2;
+        stroke-width: 2px;
+        fill: none;
+        transition: all 0.4s;
     }
 
-    .node image {
+    .link.is-highlighted {
+        stroke-opacity: 1;
+        stroke-width: 3px;
+        stroke: #3b82f6;
+        filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
+    }
+
+    .link-spouse {
+        stroke: #d946ef;
+        stroke-width: 2.5px;
+        stroke-dasharray: 6, 4;
+        stroke-opacity: 0.4;
+    }
+
+    /* Search Component */
+    .tree-search {
+        position: relative;
+        width: 300px;
+    }
+
+    .tree-search input {
+        width: 100%;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 10px 15px 10px 40px;
+        color: white;
+        font-size: 14px;
+        transition: all 0.3s;
+    }
+
+    .tree-search input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        background: #26334a;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 0.5;
+    }
+
+    .search-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 20;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .search-result {
+        padding: 10px 15px;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: background 0.2s;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .search-result:hover {
+        background: #334155;
+    }
+
+    .search-result .photo {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background: #475569;
+    }
+
+    .search-result .name {
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    /* Zoom Controls */
+    .zoom-controls {
+        position: absolute;
+        bottom: 24px;
+        right: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 10;
+    }
+
+    .zoom-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: rgba(30, 41, 59, 0.8);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 18px;
+        transition: all 0.2s;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .zoom-btn:hover {
+        background: #3b82f6;
+        border-color: #3b82f6;
+    }
+
+    /* Fullscreen specific */
+    .tree-container:fullscreen {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+        border: none;
     }
 </style>
 
+<div class="zoom-controls">
+    <button class="zoom-btn" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
+    <button class="zoom-btn" onclick="zoomIn()" title="Zoom In">+</button>
+    <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">-</button>
+    <button class="zoom-btn" onclick="resetZoom()" title="Reset View">⟲</button>
+</div>
+<div id="treeTooltip" class="tree-tooltip"></div>
+
+<!-- Family Sidebar -->
+<div id="familySidebar" class="family-sidebar">
+    <button class="sidebar-close" onclick="closeSidebar()">&times;</button>
+    <img id="sidebarPhoto" src="" class="sidebar-photo">
+    <h2 id="sidebarName" class="sidebar-name"></h2>
+    <div id="sidebarMeta" class="sidebar-meta"></div>
+
+    <div class="sidebar-section">
+        <h3>Biography</h3>
+        <p id="sidebarBio" class="sidebar-bio"></p>
+    </div>
+
+    <div class="sidebar-section">
+        <h3>Immediate Family</h3>
+        <div id="sidebarFamilyList" class="sidebar-family-list"></div>
+    </div>
+
+    <div class="sidebar-footer">
+        <a id="btnFullProfile" href="#" class="btn-full-profile">View Full Profile</a>
+    </div>
+</div>
+
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
+    let nodeMap = new Map();
+    let currentData = null;
+    let svg, g, simulation, zoom;
+
+    function formatLifespan(person) {
+        if (!person.birth_date && !person.death_date) return 'Unknown';
+
+        const birthYear = person.birth_date ? new Date(person.birth_date).getFullYear() : '???';
+        const deathYear = person.death_date ? new Date(person.death_date).getFullYear() : (person.is_living ? 'Present' : '???');
+
+        let age = '';
+        if (person.birth_date) {
+            const birth = new Date(person.birth_date);
+            const ref = person.death_date ? new Date(person.death_date) : new Date();
+            age = ` (${Math.floor((ref - birth) / (1000 * 60 * 60 * 24 * 365.25))}y)`;
+        }
+
+        return `${birthYear} - ${deathYear}${age}`;
+    }
+
+    function onTreeSearch(query) {
+        const results = document.getElementById('treeSearchResults');
+        if (!query || query.length < 2) {
+            results.style.display = 'none';
+            return;
+        }
+
+        const filtered = currentData.nodes.filter(n => n.name.toLowerCase().includes(query.toLowerCase()));
+
+        if (filtered.length > 0) {
+            results.innerHTML = filtered.map(n => `
+                <div class="search-result" onclick="focusOnNode('${n.id}')">
+                    <img src="${n.photo_url || 'https://api.dicebear.com/7.x/initials/svg?seed=' + n.name}" class="photo">
+                    <div class="name">${n.name}</div>
+                </div>
+            `).join('');
+            results.style.display = 'block';
+        } else {
+            results.innerHTML = '<div class="search-result">No results found</div>';
+            results.style.display = 'block';
+        }
+    }
+
+    function toggleFullscreen() {
+        const container = document.getElementById('treeContainer');
+        if (!document.fullscreenElement) {
+            container.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    function focusOnNode(id) {
+        const node = currentData.nodes.find(n => n.id === id);
+        if (node) {
+            document.getElementById('treeSearchResults').style.display = 'none';
+            document.getElementById('treeSearchInput').value = '';
+
+            const transform = d3.zoomIdentity
+                .translate(svg.node().clientWidth / 2 - node.x, svg.node().clientHeight / 2 - node.y)
+                .scale(1.2);
+
+            svg.transition().duration(750)
+                .call(zoom.transform, transform);
+
+            // Highlight briefly?
+            d3.select(`[data-node-id="${id}"]`).transition()
+                .duration(200).style("filter", "brightness(1.5)")
+                .transition().duration(800).style("filter", "none");
+        }
+    }
+
+    function closeSidebar() {
+        document.getElementById('familySidebar').classList.remove('is-open');
+        d3.selectAll(".node").classList.remove("is-active");
+        highlightLineage(null);
+    }
+
+    function openSidebar(id) {
+        const person = nodeMap.get(id);
+        if (!person) return;
+
+        document.getElementById('sidebarPhoto').src = person.photo_url || `https://api.dicebear.com/7.x/initials/svg?seed=${person.name}`;
+        document.getElementById('sidebarName').textContent = person.name;
+        document.getElementById('sidebarMeta').textContent = `${person.gender} • ${formatLifespan(person)}`;
+        document.getElementById('sidebarBio').textContent = person.biography || "No biography available.";
+        document.getElementById('btnFullProfile').href = `/people/${person.id}`;
+
+        document.getElementById('familySidebar').classList.add('is-open');
+
+        // Populate Family List
+        const familyList = document.getElementById('sidebarFamilyList');
+        const relatives = [];
+        currentData.links.forEach(l => {
+            if (l.source.id === id || l.target.id === id) {
+                const otherID = l.source.id === id ? l.target.id : l.source.id;
+                const other = nodeMap.get(otherID);
+                if (other) {
+                    relatives.push({ ...other, type: l.type });
+                }
+            }
+        });
+
+        familyList.innerHTML = relatives.length > 0 ? relatives.map(r => `
+            <div class="family-item" onclick="focusOnNode('${r.id}'); openSidebar('${r.id}')">
+                <img src="${r.photo_url || 'https://api.dicebear.com/7.x/initials/svg?seed=' + r.name}">
+                <div class="name">${r.name}</div>
+                <div class="rel">${r.type}</div>
+            </div>
+        `).join('') : '<p class="sidebar-bio">No immediate family found.</p>';
+
+        // Highlight in tree
+        d3.selectAll(".tree-card").classed("is-active", d => d.id === id);
+        highlightLineage(id);
+    }
+
+    function highlightLineage(id) {
+        if (!id) {
+            d3.selectAll(".node").classed("is-dimmed", false);
+            d3.selectAll(".link").classed("is-dimmed", false).classed("is-highlighted", false);
+            return;
+        }
+
+        const relatedNodes = new Set([id]);
+        const relatedLinks = new Set();
+
+        // 1. Trace Ancestors
+        const traceAncestors = (nodeID) => {
+            currentData.links.forEach(l => {
+                if (l.type === 'child' && l.source.id === nodeID) { // source is child of target
+                    relatedNodes.add(l.target.id);
+                    relatedLinks.add(l.source.id + "-" + l.target.id);
+                    traceAncestors(l.target.id);
+                } else if (l.type === 'parent' && l.target.id === nodeID) { // target is parent of source
+                    relatedNodes.add(l.source.id);
+                    relatedLinks.add(l.source.id + "-" + l.target.id);
+                    traceAncestors(l.source.id);
+                }
+            });
+        };
+
+        // 2. Trace Descendants
+        const traceDescendants = (nodeID) => {
+            currentData.links.forEach(l => {
+                if (l.type === 'parent' && l.source.id === nodeID) { // source is parent of target
+                    relatedNodes.add(l.target.id);
+                    relatedLinks.add(l.source.id + "-" + l.target.id);
+                    traceDescendants(l.target.id);
+                } else if (l.type === 'child' && l.target.id === nodeID) { // target is child of source
+                    relatedNodes.add(l.source.id);
+                    relatedLinks.add(l.source.id + "-" + l.target.id);
+                    traceDescendants(l.source.id);
+                }
+            });
+        };
+
+        // 3. Spouses
+        currentData.links.forEach(l => {
+            if (l.type === 'spouse' && (l.source.id === id || l.target.id === id)) {
+                relatedNodes.add(l.source.id);
+                relatedNodes.add(l.target.id);
+                relatedLinks.add(l.source.id + "-" + l.target.id);
+            }
+        });
+
+        traceAncestors(id);
+        traceDescendants(id);
+
+        // 3. Proactively include "Other Parents" of any children in the traced set
+        // This ensures the family union is shown even when hovering from above
+        currentData.links.forEach(l => {
+            if (l.type === 'parent' || l.type === 'child') {
+                const childID = (l.type === 'parent') ? (l.target.id || l.target) : (l.source.id || l.source);
+                const parentID = (l.type === 'parent') ? (l.source.id || l.source) : (l.target.id || l.target);
+
+                if (relatedNodes.has(typeof childID === 'object' ? childID.id : childID)) {
+                    // This node is a parent of someone in the traced set
+                    relatedNodes.add(typeof parentID === 'object' ? parentID.id : parentID);
+                    relatedLinks.add((typeof parentID === 'object' ? parentID.id : parentID) + "-" + (typeof childID === 'object' ? childID.id : childID));
+                }
+            }
+        });
+
+        // 4. Trace Spouses of any related nodes found
+        currentData.links.forEach(l => {
+            const sID = l.source.id || l.source;
+            const tID = l.target.id || l.target;
+            if (l.type === 'spouse' && relatedNodes.has(sID) && relatedNodes.has(tID)) {
+                relatedLinks.add(sID + "-" + tID);
+            }
+        });
+
+        d3.selectAll(".node").classed("is-dimmed", d => !relatedNodes.has(d.id));
+        d3.selectAll(".link").classed("is-dimmed", d => {
+            const linkID = d.source.id + "-" + d.target.id;
+            return !relatedLinks.has(linkID);
+        }).classed("is-highlighted", d => {
+            const linkID = d.source.id + "-" + d.target.id;
+            return relatedLinks.has(linkID);
+        });
+    }
+
     async function initTree() {
         const container = document.getElementById('treeContainer');
         const width = container.clientWidth;
@@ -63,119 +595,218 @@
             const response = await fetch('/api/tree/data');
             const result = await response.json();
 
-            if (!result.success) {
-                console.error('Failed to load tree data:', result.message);
-                return;
-            }
+            if (!result.success) return;
 
-            const data = result.data;
+            currentData = result.data;
+            nodeMap = new Map(currentData.nodes.map(n => [n.id, n]));
+            currentData.nodes.forEach(n => {
+                n.level = 0;
+                n.isSpouse = false;
+                n.spouses = [];
+            });
 
-            // Level Calculation for Hierarchical Layout
-            const nodeMap = new Map(data.nodes.map(n => [n.id, n]));
-            data.nodes.forEach(n => n.level = 0);
-
-            // Propagate levels based on relationships
-            // Run multiple passes to ensure depth propagation
-            for (let i = 0; i < data.nodes.length; i++) {
-                data.links.forEach(link => {
-                    const source = nodeMap.get(link.source);
-                    const target = nodeMap.get(link.target);
-
-                    if (source && target) {
-                        if (link.type === 'parent') {
-                            // Source is Parent of Target -> Target is lower (higher level)
-                            if (target.level <= source.level) target.level = source.level + 1;
-                        } else if (link.type === 'child') {
-                            // Source is Child of Target -> Source is lower (higher level)
-                            if (source.level <= target.level) source.level = target.level + 1;
+            // Calculate Levels
+            for (let i = 0; i < currentData.nodes.length; i++) {
+                currentData.links.forEach(l => {
+                    const s = nodeMap.get(l.source);
+                    const t = nodeMap.get(l.target);
+                    if (s && t) {
+                        if (l.type === 'parent') {
+                            if (t.level <= s.level) t.level = s.level + 1;
+                        } else if (l.type === 'child') {
+                            if (s.level <= t.level) s.level = t.level + 1;
                         }
                     }
                 });
             }
 
-            // D3 Implementation
-            const svg = d3.select("#treeContainer")
-                .append("svg")
-                .attr("width", width)
-                .attr("height", height)
-                .call(d3.zoom().on("zoom", (event) => {
-                    g.attr("transform", event.transform);
-                }));
+            const maxLevel = d3.max(currentData.nodes, d => d.level) || 0;
 
-            const g = svg.append("g");
-
-            const simulation = d3.forceSimulation(data.nodes)
-                .force("link", d3.forceLink(data.links).id(d => d.id).distance(100))
-                .force("charge", d3.forceManyBody().strength(-500))
-                .force("center", d3.forceCenter(width / 2, height / 2))
-                .force("collide", d3.forceCollide().radius(50))
-                .force("y", d3.forceY(d => d.level * 100).strength(0.5));
-
-            const link = g.append("g")
-                .attr("class", "links")
-                .selectAll("line")
-                .data(data.links)
-                .enter().append("line")
-                .attr("class", "link");
-
-            const node = g.append("g")
-                .attr("class", "nodes")
-                .selectAll("g")
-                .data(data.nodes)
-                .enter().append("g")
-                .attr("class", "node")
-                .call(d3.drag()
-                    .on("start", dragstarted)
-                    .on("drag", dragged)
-                    .on("end", dragended));
-
-            // Node circles (gender-based color)
-            node.append("circle")
-                .attr("r", 20)
-                .attr("fill", d => {
-                    if (d.gender === 'Male') return '#3b82f6'; // Blue
-                    if (d.gender === 'Female') return '#ec4899'; // Pink
-                    return '#10b981'; // Green for others
-                });
-
-            // Node labels
-            node.append("text")
-                .attr("dy", 32)
-                .attr("text-anchor", "middle")
-                .text(d => d.name);
-
-            // Click to view person details
-            node.on("click", (event, d) => {
-                window.location.href = `/people/${d.id}`;
+            // Identify Spouses
+            currentData.links.forEach(l => {
+                if (l.type === 'spouse') {
+                    const s = nodeMap.get(l.source);
+                    const t = nodeMap.get(l.target);
+                    if (s && t) {
+                        s.isSpouse = true;
+                        t.isSpouse = true;
+                        if (!s.spouses.includes(t.id)) s.spouses.push(t.id);
+                        if (!t.spouses.includes(s.id)) t.spouses.push(s.id);
+                        const avgLevel = Math.max(s.level, t.level);
+                        s.level = avgLevel;
+                        t.level = avgLevel;
+                    }
+                }
             });
 
-            simulation.on("tick", () => {
-                link
-                    .attr("x1", d => d.source.x)
-                    .attr("y1", d => d.source.y)
-                    .attr("x2", d => d.target.x)
-                    .attr("y2", d => d.target.y);
+            svg = d3.select("#treeContainer").append("svg")
+                .attr("width", "100%")
+                .attr("height", "100%");
 
-                node
-                    .attr("transform", d => `translate(${d.x},${d.y})`);
+            zoom = d3.zoom().scaleExtent([0.1, 3]).on("zoom", (e) => g.attr("transform", e.transform));
+            svg.call(zoom);
+
+            window.zoomIn = () => svg.transition().call(zoom.scaleBy, 1.4);
+            window.zoomOut = () => svg.transition().call(zoom.scaleBy, 0.6);
+            window.resetZoom = () => svg.transition().call(zoom.transform, d3.zoomIdentity.translate(width / 2 - 110, 100).scale(0.8));
+
+            g = svg.append("g");
+
+            // Generation Lanes
+            const laneHeight = 220;
+            const lanes = g.append("g").attr("class", "lanes");
+            for (let i = 0; i <= maxLevel; i++) {
+                lanes.append("rect")
+                    .attr("x", -10000)
+                    .attr("y", i * laneHeight - laneHeight / 2)
+                    .attr("width", 20000)
+                    .attr("height", laneHeight)
+                    .attr("class", i % 2 === 0 ? "lane-even" : "lane-odd");
+
+                lanes.append("text")
+                    .attr("x", width / 2 - width / 3) // Relative to view center-ish
+                    .attr("y", i * laneHeight - laneHeight / 2 + 25)
+                    .attr("class", "lane-label")
+                    .text(`Generation ${i + 1}`);
+            }
+
+            svg.call(zoom.transform, d3.zoomIdentity.translate(width / 2 - 110, 100).scale(0.8));
+
+            simulation = d3.forceSimulation(currentData.nodes)
+                .force("link", d3.forceLink(currentData.links).id(d => d.id).distance(250))
+                .force("charge", d3.forceManyBody().strength(-3000))
+                .force("collide", d3.forceCollide().radius(140))
+                .force("y", d3.forceY(d => d.level * laneHeight).strength(1.5))
+                .force("x", d3.forceX(width / 2).strength(0.1))
+                .force("spouse", (alpha) => {
+                    currentData.links.forEach(l => {
+                        if (l.type === 'spouse') {
+                            const s = nodeMap.get(l.source);
+                            const t = nodeMap.get(l.target);
+                            if (s && t) {
+                                const dist = s.x - t.x;
+                                const targetDist = 240;
+                                const move = (Math.abs(dist) - targetDist) * alpha * 0.5;
+                                if (dist > 0) { s.x -= move; t.x += move; }
+                                else { s.x += move; t.x -= move; }
+                            }
+                        }
+                    });
+                });
+
+            // 1. Create Link Group (rendered first = bottom layer)
+            const link = g.append("g")
+                .selectAll("path")
+                .data(currentData.links)
+                .enter().append("path")
+                .attr("class", d => d.type === 'spouse' ? 'link link-spouse' : 'link');
+
+            // 2. Create Node Group (rendered second = top layer)
+            const node = g.append("g")
+                .selectAll("g")
+                .data(currentData.nodes)
+                .enter().append("g")
+                .attr("class", "node")
+                .attr("data-node-id", d => d.id)
+                .on("mouseover", (e, d) => !document.getElementById('familySidebar').classList.contains('is-open') && highlightLineage(d.id))
+                .on("mouseout", (e, d) => !document.getElementById('familySidebar').classList.contains('is-open') && highlightLineage(null))
+                .call(d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended));
+
+            node.append("foreignObject")
+                .attr("width", 320)
+                .attr("height", 160)
+                .attr("x", -160)
+                .attr("y", -80)
+                .style("pointer-events", "none") // Let pointer events pass to the card
+                .append("xhtml:div")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("display", "flex")
+                .style("align-items", "center")
+                .style("justify-content", "center")
+                .style("pointer-events", "none")
+                .html(d => {
+                    const indicatorColor = d.gender === 'Male' ? '#3b82f6' : (d.gender === 'Female' ? '#ec4899' : '#10b981');
+                    const photo = d.photo_url || `https://api.dicebear.com/7.x/initials/svg?seed=${d.name}`;
+                    return `
+                        <div class="tree-card" style="--indicator-color: ${indicatorColor}; pointer-events: auto;" onclick="openSidebar('${d.id}')">
+                            <img src="${photo}" class="card-photo">
+                            <div class="card-content">
+                                <div class="card-name">${d.name}</div>
+                                <div class="card-lifespan">${formatLifespan(d)}</div>
+                            </div>
+                            <div class="card-gender">${d.gender === 'Male' ? '♂' : (d.gender === 'Female' ? '♀' : '🧬')}</div>
+                        </div>
+                    `;
+                });
+
+            // Organic Bezier Curves for vertical links
+            const curveGenerator = d3.linkVertical()
+                .x(d => d.x)
+                .y(d => d.y);
+
+            function getLinkPath(d) {
+                if (d.type === 'spouse') {
+                    return `M${d.source.x},${d.source.y} L${d.target.x},${d.target.y}`;
+                }
+
+                // Parent-Child Union Logic
+                const child = d.source.level > d.target.level ? d.source : d.target;
+                const parent = d.source.level > d.target.level ? d.target : d.source;
+
+                // Find if the child has another parent in the tree
+                const otherParentLink = currentData.links.find(l =>
+                    (l.source.id === child.id || l.target.id === child.id) &&
+                    (l.source.id !== parent.id && l.target.id !== parent.id) &&
+                    (l.type === 'parent' || l.type === 'child')
+                );
+
+                let sourceX = parent.x;
+                let sourceY = parent.y + 40;
+
+                if (otherParentLink) {
+                    const otherParentID = otherParentLink.source.id === child.id ? otherParentLink.target.id : otherParentLink.source.id;
+                    const otherParent = nodeMap.get(otherParentID);
+
+                    // Check if they are spouses
+                    const isSpouse = currentData.links.some(l =>
+                        l.type === 'spouse' &&
+                        ((l.source.id === parent.id && l.target.id === otherParent.id) ||
+                            (l.source.id === otherParent.id && l.target.id === parent.id))
+                    );
+
+                    if (isSpouse) {
+                        // Use midpoint of the spouse line as the source
+                        sourceX = (parent.x + otherParent.x) / 2;
+                        sourceY = (parent.y + otherParent.y) / 2;
+
+                        // Vertical "stem" starts here
+                        const targetY = child.y - 40;
+                        const midY = (sourceY + targetY) / 2;
+
+                        // We also need to draw a tiny vertical line from the spouse line center to start the curve
+                        // But for simplicity, we'll just curve from the midpoint
+                        return `M${sourceX},${sourceY} C${sourceX},${midY} ${child.x},${midY} ${child.x},${targetY}`;
+                    }
+                }
+
+                // Default vertical curve
+                const targetY = child.y - 40;
+                const midY = (sourceY + targetY) / 2;
+                return `M${sourceX},${sourceY} C${sourceX},${midY} ${child.x},${midY} ${child.x},${targetY}`;
+            }
+
+            simulation.on("tick", () => {
+                link.attr("d", getLinkPath);
+                node.attr("transform", d => `translate(${d.x},${d.y})`);
             });
 
             function dragstarted(event, d) {
                 if (!event.active) simulation.alphaTarget(0.3).restart();
-                d.fx = d.x;
-                d.fy = d.y;
+                d.fx = d.x; d.fy = d.y;
             }
-
-            function dragged(event, d) {
-                d.fx = event.x;
-                d.fy = event.y;
-            }
-
-            function dragended(event, d) {
-                if (!event.active) simulation.alphaTarget(0);
-                d.fx = null;
-                d.fy = null;
-            }
+            function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
+            function dragended(event, d) { if (!event.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }
 
         } catch (error) {
             console.error('Error initializing tree:', error);
